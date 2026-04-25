@@ -20,6 +20,7 @@ Route::post('logout' , [UserController::class , 'logout'])->middleware('auth:san
 Route::get('getInfoUser' , [UserController::class , 'profile'])->middleware('auth:sanctum');  // للآدمن جلب حساب المستخدم أيضا 
 Route::delete('deleteUser/{userId}' , [UserController::class , 'delete'])->middleware('auth:sanctum');
 Route::put('updateUser/{userId}' , [UserController::class , 'update'])->middleware('auth:sanctum');
+Route::post('changePassword' , [UserController::class , 'changePassword'])->middleware('auth:sanctum');
 
 
 //  Specialist Api

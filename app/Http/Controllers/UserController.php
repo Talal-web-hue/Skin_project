@@ -158,4 +158,37 @@ class UserController extends Controller
                'message'=>'تم حذف المستخدم بنجاح'
             ], 200);
    }
+
+
+   //  تابع تغيير كلمة السر للمستخدم العادي , اي الزبون
+
+   public function changePassword(Request $request)
+   {
+    $user = Auth::user();
+    $validated = $request->validate(
+      [
+         'current_password'=>'required|string',
+         'new_password'=>'required|string|min:6|confirmed',
+      ]);
+      //  الآن نتحقق من صحة كلمة المرور الحالية
+      if(!Hash::check($validated['current_password'] , $user->password) )
+         {
+          return response()->json(
+            [
+             'success'=>false,
+             'message'=>'كلمة المرور الحالية غير صحيحة'
+            ] , 403);
+         }
+
+         //  الآن نقوم بتحديث كلمة المرور 
+       $user->update([
+            'password' => Hash::make($validated['new_password'])
+        ]);
+        
+      return response()->json(
+         [
+            'success'=>true,
+            'message'=>'تم تغيير كلمة المرور بنجاح , يرجى تسجيل الدخول مرة أخرى في الأجهزة الأخرى'
+         ]);
+  }
 }
