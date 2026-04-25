@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SpecialistsController;
 use App\Http\Controllers\UserController;
@@ -54,5 +55,10 @@ Route::get('myAppointment' , [AppointmentController::class , 'myAppointment'])->
 Route::get('specialistAppointment' , [AppointmentController::class , 'specialistAppointment'])->middleware('auth:sanctum');
 Route::get('allAppointmentForAdmin' , [AppointmentController::class , 'allAppointmentForAdmin'])->middleware('auth:sanctum')->middleware('auth:sanctum');
 Route::post('appointment/{id}/cancel' , [AppointmentController::class , 'cancel'])->middleware('auth:sanctum')->middleware('auth:sanctum');
-// Route::post('' , [])
+
+// Order API
+Route::post('storeOrder', [OrderController::class, 'store'])->middleware('auth:sanctum');
+Route::get('orders', [OrderController::class, 'index'])->middleware('auth:sanctum');
+Route::get('orders/{id}', [OrderController::class, 'show'])->middleware('auth:sanctum');
+Route::put('admin/ordersUpdate/{orderId}', [OrderController::class, 'orderUpdateStatus'])->middleware('auth:sanctum');
 

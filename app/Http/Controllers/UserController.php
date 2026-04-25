@@ -181,7 +181,7 @@ class UserController extends Controller
          }
 
          //  الآن نقوم بتحديث كلمة المرور 
-       $user->update([
+       $user->update([                          // طبعا هذا ليس حطأ
             'password' => Hash::make($validated['new_password'])
         ]);
         
