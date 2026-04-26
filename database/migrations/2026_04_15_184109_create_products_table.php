@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('description')->nullable();
-            $table->string('image');
+            $table->string('image');  // هذا الحقل لتخزين مسار الصورة في النظام
             $table->decimal('price' , 10 ,2);
             $table->integer('stock_quantity')->nullable()->comment('الكمية المتوفرة'); // هذا الحقل نستفيد منه لإدارة المخزون
             $table->timestamps();

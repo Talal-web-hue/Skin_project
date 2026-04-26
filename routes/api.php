@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SpecialistsController;
 use App\Http\Controllers\UserController;
@@ -61,5 +62,14 @@ Route::post('storeOrder', [OrderController::class, 'store'])->middleware('auth:s
 Route::get('orders', [OrderController::class, 'index'])->middleware('auth:sanctum');
 Route::get('orders/{id}', [OrderController::class, 'show'])->middleware('auth:sanctum');
 Route::put('admin/ordersUpdate/{orderId}', [OrderController::class, 'orderUpdateStatus'])->middleware('auth:sanctum');
-Route::('order/{id}/cancel' , [OrderController::class , 'cancelOrder'])->middleware('auth:sanctum');   // من أجل إلغاء الطلب الخاص بالزبون و إعادة المنتج للمخزون 
+Route::post('order/{id}/cancel' , [OrderController::class , 'cancelOrder'])->middleware('auth:sanctum');   // من أجل إلغاء الطلب الخاص بالزبون و إعادة المنتج للمخزون 
 
+//  Products API
+Route::post('storeProduct' , [ProductController::class , 'store'])->middleware('auth:sanctum');  // الآدمن هو الذي يقوم بعملية إنشاء المنتج
+Route::get('indexProduct' , [ProductController::class , 'index']);  // عام من أجل مشاهدة المنتجات المتاحة في موقعي
+Route::put('updateProduct/{id}' , [ProductController::class , 'update'])->middleware('auth:sanctum');  
+Route::delete('deleteProduct/{id}' , [ProductController::class , 'delete'])->middleware('auth:sanctum');  
+//  طبعا يقوم به العميل و الزائر غير مسجل الدخول
+Route::get('getProduct/{id}',[ProductController::class , 'getProduct']);  // جلب منتج معين من أجل عرض تفاصيله في صفحة المنتج 
+// جلب المنتجات  يالفلترة حسب اسم المنتج و السعر و الوصف 
+Route::get('products', [ProductController::class, 'getProducts']);  // ج
