@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -149,5 +150,40 @@ class OrderController extends Controller
                     'success'=>true,
                     'message'=>'تم تحديث حالة الطلب بنجاح'
                 ] , 200);
+}
+
+
+//    تابع إلغاء الطلب من قبل العميل
+   public function cancelOrder(Request $request , $id)
+   {
+   $user = Auth::user();
+   $order = Order::with('orderItmes')->findOrFail($id);  // هنا قمنا بجلب الطلب مع العناصر المرتبطة به
+    if($user->role !== 'client' || $order->user_id !== $user->id)
+    {
+        return response()->json([
+            'success' => false,
+            'message' => 'غير مصرح لك بإلغاء هذا الطلب'
+        ], 403);
+    }
+
+    if($order->status === 'cancelled')
+    {
+        return response()->json([
+            'success' => false,
+            'message' => 'هذا الطلب تم إلغائه مسبقاً'
+        ], 403);
+    }
+    DB::transaction(function () use ($order) {
+        $order->update(['status' => 'cancelled']);   // تحديث حالة الطلب إلى ملغي
+        foreach ($order->orderItems as $item) {   // هنا إعادة الكميات المخزنة للمنتجات
+            Product::where('id' , $item->product_id)
+            ->increment('quantity', $item->quantity);  // إعادة الكمية إلى المخزون
+        }
+    });
+    return response()->json(
+        [
+            'success'=>true,
+            'message'=>'تم إلغاء حالة الطلب بنجاح وإعادة الكمية للمخزون'
+        ] , 200);
 }
 }

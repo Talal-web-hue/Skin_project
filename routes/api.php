@@ -61,4 +61,5 @@ Route::post('storeOrder', [OrderController::class, 'store'])->middleware('auth:s
 Route::get('orders', [OrderController::class, 'index'])->middleware('auth:sanctum');
 Route::get('orders/{id}', [OrderController::class, 'show'])->middleware('auth:sanctum');
 Route::put('admin/ordersUpdate/{orderId}', [OrderController::class, 'orderUpdateStatus'])->middleware('auth:sanctum');
+Route::('order/{id}/cancel' , [OrderController::class , 'cancelOrder'])->middleware('auth:sanctum');   // من أجل إلغاء الطلب الخاص بالزبون و إعادة المنتج للمخزون 
 
