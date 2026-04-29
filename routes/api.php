@@ -72,4 +72,6 @@ Route::delete('deleteProduct/{id}' , [ProductController::class , 'delete'])->mid
 //  طبعا يقوم به العميل و الزائر غير مسجل الدخول
 Route::get('getProduct/{id}',[ProductController::class , 'getProduct']);  // جلب منتج معين من أجل عرض تفاصيله في صفحة المنتج 
 // جلب المنتجات  يالفلترة حسب اسم المنتج و السعر و الوصف 
-Route::get('products', [ProductController::class, 'getProducts']);  // ج
+Route::get('products/search', [ProductController::class, 'getProducts']);  // يكون متاح للجميع
+
+// 

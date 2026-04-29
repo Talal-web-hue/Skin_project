@@ -147,4 +147,30 @@ public function getProduct($id)
                 'updated_at'     => $product->updated_at
     ]], 200);
 }
+
+
+//   تابع جلب المنتجات بالفلترة حسب اسم المنتج و الوصف و السعر 
+
+ public function getProducts(Request $request)
+ {
+  $query = Product::query();
+  if($request->filled('name'))
+    {
+    $query->where('name' , 'like' , '%' . $request->name . '%');
+    }
+    if($request->filled('description'))
+    {
+    $query->where('description' , 'like' , '%' . $request->description . '%');
+    }
+    if($request->filled('price'))
+    {
+    $query->where('price','like' , '%' . $request->price . '%');
+    }
+    $products = $query->get();
+    return response()->json([
+        'success' => true,
+        'message' => 'إليك المنتجات التي تبحث عنها:',
+        'data' => $products
+    ], 200);
+ }
 }
