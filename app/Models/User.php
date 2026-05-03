@@ -34,7 +34,13 @@ class User extends Authenticatable
     {
         return $this->hasMany(Order::class , 'user_id');
     }
+  
 
+    // المستخدم يقيَم تقييم واحد او عدة تقييمات
+    public function reviews()
+    {
+        return $this->hasMany(Review::class , 'user_id');
+    }
     
     protected $hidden = [
         'password',

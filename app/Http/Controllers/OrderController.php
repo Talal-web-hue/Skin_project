@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
-    // إنشاء طلب جديد متاح للآدمن والزبون فقط
+  // إنشاء طلب جديد متاح للآدمن والزبون فقط
+//    الأخصائي دوره يركز على الخدمات و المواعيد الطبية
+//   الآدمن ممكن أن يقوم بعملية الحجز عند الطلب الهاتفي او زيارة المركز
     public function store(Request $request)
     {
         $user = Auth::user();
@@ -51,7 +53,7 @@ class OrderController extends Controller
                     'order_id' => $order->id,
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
-                    'unit_price' => $item['price'],
+                    'unit_price' => $item['price'],  // السعر وقت الشراء
                 ]);
             }
 
@@ -153,12 +155,12 @@ class OrderController extends Controller
 }
 
 
-//    تابع إلغاء الطلب من قبل العميل
+//    تابع يسمح للعميل بإلغاء طلبه مع إعادة المنتجات للمخزون تلقائيا
    public function cancelOrder(Request $request , $id)
    {
    $user = Auth::user();
-   $order = Order::with('orderItmes')->findOrFail($id);  // هنا قمنا بجلب الطلب مع العناصر المرتبطة به
-    if($user->role !== 'client' || $order->user_id !== $user->id)
+   $order = Order::with('orderItems')->findOrFail($id);  // هنا قمنا بجلب الطلب مع العناصر المرتبطة به
+    if($user->role !== 'client' || $order->user_id !== $user->id) // يتحقق أن المستخدم عميل و أن الطلب له
     {
         return response()->json([
             'success' => false,
@@ -185,5 +187,126 @@ class OrderController extends Controller
             'success'=>true,
             'message'=>'تم إلغاء حالة الطلب بنجاح وإعادة الكمية للمخزون'
         ] , 200);
+}
+
+//   حذف طلب , و هي صلاحية للآدمن فقط
+public function delete($id)
+{
+    if(Auth::user()->role !== 'admin')
+    {
+        return response()->json([
+            'success' => false,
+            'message' => 'غير مصرح لك بحذف هذا الطلب'
+        ], 403);
+    }
+    $order = Order::findOrFail($id);
+    $order->delete();
+    return response()->json([
+        'success' => true,
+        'message' => 'تم حذف الطلب بنجاح'
+    ], 200);
+}
+
+
+//  تابع حساب الفاتورة 
+public function calculateInvoice(Request $request)
+{
+   // التحقق من المدخلات
+        $validated = $request->validate([
+            'items'             => 'required|array|min:1',
+            'items.*.product_id'=> 'required|exists:products,id',
+            'items.*.quantity'  => 'required|integer|min:1',
+            'discount_code'     => 'nullable|string|max:50',      // كوبون خصم اختياري
+            'shipping_address'  => 'nullable|string|max:500',     // لحساب تكلفة الشحن
+            'tax_rate'          => 'nullable|numeric|min:0|max:100', // نسبة الضريبة (مثلاً 15)
+        ]);
+
+        $subtotal = 0;
+        $invoiceItems = [];
+        $availableProducts = [];
+
+      // جلب المنتجات وحساب المجموع الجزئي
+        foreach ($validated['items'] as $item) {
+            $product = Product::findOrFail($item['product_id']);
+            
+            // فحص المخزون وإعلام المستخدم
+            $inStock = $product->stock_quantity >= $item['quantity'];
+            
+            $lineTotal = $product->price * $item['quantity'];
+            $subtotal += $lineTotal;
+            
+            $invoiceItems[] = [
+                'product_id'   => $product->id,
+                'product_name' => $product->name,
+                'quantity'     => $item['quantity'],
+                'unit_price'   => $product->price,
+                'line_total'   => $lineTotal,  // هو مجموع اسعار المنتجات 
+                'in_stock'     => $inStock,  // اذا كان المنتج متوفر تكون قيمة هذا المتغير هي true
+                'message'      => $inStock ? 'متوفر' : "الكمية المتاحة: {$product->stock_quantity}"
+            ];
+            
+            $availableProducts[$product->id] = $product;
+        }
+
+        //  حساب الخصم (كوبون)
+        $discountAmount = 0;
+        $discountMessage = null;
+        
+        if (!empty($validated['discount_code'])) {
+            // هنا يعطي 10 بالمية كعملية خصم
+            $coupons = [
+                'WELCOME10' => ['type' => 'percent', 'value' => 10],
+                'SAVE50'    => ['type' => 'fixed', 'value' => 50],
+            ];
+            
+            $code = strtoupper($validated['discount_code']);
+            if (isset($coupons[$code])) {
+                $coupon = $coupons[$code];
+                if ($coupon['type'] === 'percent') {
+                    $discountAmount = $subtotal * ($coupon['value'] / 100);
+                } else {
+                    $discountAmount = min($coupon['value'], $subtotal); // لا يتجاوز المجموع
+                }
+                $discountMessage = "تم تطبيق كوبون {$code}";
+            } else {
+                $discountMessage = "كوبون غير صالح";
+            }
+        }
+
+        //  حساب تكلفة الشحن
+        $shippingCost = 0;
+        if (!empty($validated['shipping_address'])) {
+            // مثال: شحن مجاني للطلبات فوق 300، وإلا 25 
+            $shippingCost = ($subtotal - $discountAmount >= 300) ? 0 : 25;
+        }
+
+        //حساب الضريبة)
+        $taxRate = $validated['tax_rate'] ?? 0; // نسبة الضريبة (مثلاً 15 لـ 15%)
+        $taxableAmount = max(0, $subtotal - $discountAmount);
+        $taxAmount = $taxableAmount * ($taxRate / 100);
+
+        // الحساب النهائي
+        $total = $taxableAmount + $shippingCost + $taxAmount;
+
+        // 📤 7. إرجاع الفاتورة المفصلة
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'items' => $invoiceItems,
+                'summary' => [
+                    'subtotal'       => round($subtotal, 2),
+                    'discount'       => round($discountAmount, 2),
+                    'discount_note'  => $discountMessage,
+                    'shipping'       => round($shippingCost, 2),
+                    'tax_rate'       => $taxRate . '%',
+                    'tax_amount'     => round($taxAmount, 2),
+                    'total'          => round($total, 2),
+                    'currency'       => 'SAR'   // نوع العملة , هنا عندي العملة السورية مثلا 
+                ],
+                'warnings' => collect($invoiceItems)->filter(fn($i) => !$i['in_stock'])->pluck('message')->toArray(),
+                'can_checkout' => collect($invoiceItems)->every(fn($i) => $i['in_stock']) && $total > 0  // بتأكد من أن قمية الفاتورة هي أكبر من الصفر و يتحقق أيضا من ان العنصر هل هو متاح أم لا 
+            ]
+        ]);
+
 }
 }

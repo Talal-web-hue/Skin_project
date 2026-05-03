@@ -14,9 +14,10 @@ return new class extends Migration
         Schema::create('reviews', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('service_id')->constrained('services')->onDelete('cascade');
-            $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
-            $table->string('comment');
+            // $table->foreignId('service_id')->constrained('services')->onDelete('cascade');
+            $table->morphs('reviewable');  // يضيف reviewable_id و reviewable_type        
+            // $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
+            $table->string('comment')->nullable()->comment('تعليق المستخدم على الخدمة أو المنتج');
             $table->decimal('rating' , 3 , 2)->nullable()->comment('متوسط التقييمات');            
             $table->timestamps();
         });

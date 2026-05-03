@@ -15,7 +15,7 @@ class Service extends Model
 
     public function reviews()
     {
-        return $this->hasMany(Review::class , 'service_id');
+        return $this->morphTo(Review::class , 'reviewable')->where('is_visible' , true);
     }
 
     
