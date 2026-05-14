@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->string('specialization');
             $table->string('bio');
-            $table->boolean('is_active')->default('true');
+            $table->boolean('is_active')->default(true);
             $table->decimal('rating' , 3 , 2)->nullable()->comment('متوسط التقييمات');            
             $table->timestamps();
         });
