@@ -15,12 +15,12 @@ class SpecialistsController extends Controller
 {
  public function store(Request $request)
     {
-        // 🔒 التحقق من صلاحية المدير
+        //  التحقق من صلاحية المدير
         if (Auth::user()->role !== 'admin') {
             return response()->json(['success' => false, 'message' => 'غير مصرح'], 403);
         }
 
-        // ✅ التحقق من المدخلات (مطابق لهيكلك الجديد)
+        //  التحقق من المدخلات (مطابق لهيكلك الجديد)
         $validated = $request->validate([
             'first_name'     => 'required|string|max:50',
             'last_name'      => 'required|string|max:50',
@@ -28,7 +28,7 @@ class SpecialistsController extends Controller
             'phone'          => 'required|unique:users,phone|regex:/^[0-9]{8,15}$/',
             'password'       => 'required|string|min:6',
             'date_of_birth'  => 'nullable|date',
-            'skin_type'      => 'nullable|in:dry,oily', // ✅ جعلناه اختياريًا
+            'skin_type'      => 'nullable|in:dry,oily', //  جعلناه اختياريًا
             'specialization' => 'required|string|max:250',
             'bio'            => 'required|string|max:500',
             'is_active'      => 'sometimes|boolean',
@@ -44,12 +44,12 @@ class SpecialistsController extends Controller
                     'phone'         => $validated['phone'],
                     'password'      => Hash::make($validated['password']),
                     'date_of_birth' => $validated['date_of_birth'] ?? null,
-                    'role'          => 'specialist', // ✅ الآن متوافق مع الـ ENUM
-                    'skin_type'     => $validated['skin_type'] ?? null, // ✅ المعامل ?? يمنع الخطأ نهائيًا
+                    'role'          => 'specialist', //  الآن متوافق مع الـ ENUM
+                    'skin_type'     => $validated['skin_type'] ?? null, //  المعامل ?? يمنع الخطأ نهائيًا
                 ]);
 
-                // 2️⃣ إنشاء سجل الأخصائي وربطه بالمستخدم
-                // ✅ نستخدم $user->id لأن الـ Migration يستخدم $table->id() الافتراضي
+                //  إنشاء سجل الأخصائي وربطه بالمستخدم
+                //  نستخدم $user->id لأن الـ Migration يستخدم $table->id() الافتراضي
                 $specialist = Specialists::create([
                     'user_id'        => $user->id,
                     'specialization' => $validated['specialization'],
@@ -80,15 +80,15 @@ class SpecialistsController extends Controller
     // تحديث بيانات الأخصائي
 public function update(Request $request, $id)
 {
-    // 1. التحقق من صلاحية المدير
+    //  التحقق من صلاحية المدير
     if (Auth::user()->role !== 'admin') {
         return response()->json(['success' => false, 'message' => 'غير مصرح'], 403);
     }
 
-    // 2. جلب الأخصائي والمستخدم المرتبط به
+    // جلب الأخصائي والمستخدم المرتبط به
     $specialist = Specialists::with('user')->findOrFail($id);
 
-    // 3. التحقق من البيانات المرسلة
+    //  التحقق من البيانات المرسلة
     $validated = $request->validate([
         'first_name'     => 'sometimes|string|max:50',
         'last_name'      => 'sometimes|string|max:50',
@@ -103,7 +103,7 @@ public function update(Request $request, $id)
     ]);
 
     try {
-        // 4. تحديث جدول المستخدمين (البيانات الشخصية)
+        //  تحديث جدول المستخدمين (البيانات الشخصية)
         // نستخدم merge لدمج كلمة المرور المشفرة إذا وجدت
         $userData = $validated;
         if (isset($validated['password'])) {
@@ -111,14 +111,14 @@ public function update(Request $request, $id)
         }
         $specialist->user->update($userData);
 
-        // 5. تحديث جدول الأخصائيين (البيانات المهنية)
+        //  تحديث جدول الأخصائيين (البيانات المهنية)
         $specialist->update([
             'specialization' => $validated['specialization'] ?? $specialist->specialization,
             'bio'            => $validated['bio'] ?? $specialist->bio,
             'is_active'      => $validated['is_active'] ?? $specialist->is_active,
         ]);
 
-        // 6. إرجاع النتيجة
+        //  إرجاع النتيجة
         return response()->json([
             'success' => true,
             'message' => 'تم التحديث بنجاح',

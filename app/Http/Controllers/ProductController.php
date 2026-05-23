@@ -28,26 +28,30 @@ public function store(Request $request)
         'description' => 'nullable|string|max:500',
         'price' => 'required|numeric|min:0',
         'stock_quantity' => 'nullable|integer|min:0',
-        'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',  // هذا الحقل للتحقق من صحة الصورة
-    ]);
+        'images' => 'nullable|array|max:5',
+        'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:2048'
+            ]);
     //  الان نناقش الصورة 
-    if($request->hasFile('image')) {
-        {
-        $imagePath = $request->file('image')->store('products', 'public');  // تخزين الصورة في مجلد 'products' داخل التخزين العام
-        }
-        }
+   
         $product = Product::create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'price' => $validated['price'],
             'stock_quantity' => $validated['stock_quantity'] ?? null,
-            'image' => $imagePath,  // تخزين مسار الصورة في قاعدة البيانات
         ]);
+        //  معالجة رفع الصورة
+                    if ($request->hasFile('images')) {
+                    foreach ($request->file('images') as $index => $file) {
+                    $product->images()->create([
+                   'image_path' => $file->store('products', 'public')
+                    ]);
+        }
+       }
          return response()->json(
             [
                 'success' => true,
                 'message' => 'تم إنشاء المنتج بنجاح',
-                'data' => $product
+                'data' => $product->load('images')
             ], 201);
 
 }
@@ -80,30 +84,40 @@ public function index()
     $validated = $request->validate([
         'name'           => 'sometimes|string|max:100',
         'description'    => 'sometimes|nullable|string|max:500',
-        'image'          => 'sometimes|image|mimes:jpeg,png,jpg,webp|max:2048',
         'price'          => 'sometimes|numeric|min:0',
-        'stock_quantity' => 'sometimes|integer|min:0'
+        'stock_quantity' => 'sometimes|integer|min:0',
+        'images'=> 'sometimes|array|max:5',
+        'images.*'=> 'image|mimes:jpeg,png,jpg,webp|max:2048'
     ]);
+           //  تحديث الحقول النصية يحتفظ بالقيم القديمة إذا لم تُرسل
+        $product->update([
+            'name'           => $validated['name'] ?? $product->name,
+            'description'    => $validated['description'] ?? $product->description,
+            'price'          => $validated['price'] ?? $product->price,
+            'stock_quantity' => $validated['stock_quantity'] ?? $product->stock_quantity,
+        ]);
+       // معالجة الصورة
+    if ($request->hasFile('images')) {
+      foreach ($product->images as $oldImage) {
+            Storage::disk('public')->delete($oldImage->path);
+            $oldImage->delete();
 
-    // 3. معالجة الصورة
-    if ($request->hasFile('image')) {
-        // حذف الصورة القديمة
-        if ($product->image) {
-            Storage::disk('public')->delete($product->image);
-        }
-        // حفظ الجديدة وتخزين المسار
-        $validated['image'] = $request->file('image')->store('products', 'public');
+                 //  رفع الصور الجديدة وربطها بالمنتج
+        foreach ($request->file('images') as $index => $file) {
+            $product->images()->create([
+                'path'=> $file->store('products', 'public'),
+                'sort_order' => $index
+                ]);
+            }
     }
-
-    // 4. التحديث
-    $product->update($validated);
-
-    // 5. الإرجاع مع refresh لضمان ظهور البيانات الجديدة
+    }    
+    //  الإرجاع مع refresh لضمان ظهور البيانات الجديدة
     return response()->json([
         'success' => true,
         'message' => 'تم تحديث المنتج بنجاح',
-        'data'    => $product->refresh() 
+        'data'    => $product->load('images')->refresh() // تحميل الصور المحدثة مع تحديث بيانات المنتج
     ], 200);
+
 }
 
 
@@ -114,7 +128,15 @@ public function delete($id)
     if (Auth::user()->role !== 'admin') {
         return response()->json(['success' => false, 'message' => 'غير مصرح لك لحذف المنتج'], 403);
     }
-    $product = Product::findOrFail($id);
+    $product = Product::find($id);
+    if(!$product)
+        {
+          return response()->json(
+            [
+                'success'=>false,
+                'message'=>'المنتج غير موجود أنه قد يكون تم حذفه مسبقاً'
+            ] , 403);
+        }
          // حذف الصورة من التخزين إذا كانت موجودة
     if ($product->image) {
         Storage::disk('public')->delete($product->image);    
@@ -132,7 +154,13 @@ public function delete($id)
 //  تابع جلب تفاصيل منتج معين , هذه الخاصية متاحة للجميع
 public function getProduct($id)
 {
-    $product = Product::findOrFail($id);
+    $product = Product::with('images')->findOrFail($id);
+    $imagesData = $product->images->map(function($image) {
+        return [
+            'id' => $image->id,
+            'url' => asset("storage/{$image->image_path}"),
+        ];
+    });
     return response()->json([
         'success' => true,
         'message' => 'تفاصيل المنتج',
@@ -142,7 +170,7 @@ public function getProduct($id)
                 'description'    => $product->description,
                 'price'          => $product->price,
                 'stock_quantity' => $product->stock_quantity,
-                'image_url'      => $product->image ? asset("storage/{$product->image}") : null,
+                'image_url'      => $imagesData->first() ? $imagesData->first()['url'] : null,
                 'created_at'     => $product->created_at,
                 'updated_at'     => $product->updated_at
     ]], 200);
