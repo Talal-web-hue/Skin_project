@@ -180,5 +180,33 @@ public function getSpecialist($id)
         ] , 200);
  }
 
+
+
+
+//  تابع جلب الأخصائيين بدون index
+    //   هذا التابع متاح للجميع , اي زائر غير مسجل الدخول , أدمن و أخصائي أيضا
+     public function getAllSpecialists()
+     {
+     $specialists = Specialists::with('user:id,first_name,last_name,phone,email,date_of_birth')
+     ->orderBy('rating' , 'desc')->get();  // جلب الأخصائيين حسب الأعلى تقييما
+    
+    //  تنسيق الرد باستخدام التنسيق التالي
+    $data = $specialists->map(function($specialist) {
+      return [
+            'id'=> $specialist->id,
+            'name'=> "{$specialist->user->first_name} {$specialist->user->last_name}",
+            'phone'=> $specialist->user->phone,
+            'specialization' => $specialist->specialization,
+            'bio'=> $specialist->bio,
+            'rating'=> $specialist->rating,
+            'is_active'=> $specialist->is_active
+             ];  
+     });
+     return response()->json([
+        'success'=>true,
+        'message'=>'تم جلب جميع الأخصائيين بنجاح',
+        'data'=>$data
+     ] , 200);
 }
-       
+      
+}

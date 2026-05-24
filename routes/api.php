@@ -33,8 +33,7 @@ Route::put('updateSpecialist/{specialistId}' , [SpecialistsController::class , '
 Route::delete('destroySpecialist/{specialistId}' , [SpecialistsController::class , 'destroy'])->middleware('auth:sanctum');
 Route::get('getSpecialist/{specialistId}' , [SpecialistsController::class , 'getSpecialist'])->middleware('auth:sanctum');
 Route::get('index' , [SpecialistsController::class , 'index']); // لجلب الأخصائيين النشطين مع الفلترة حسب التخصص
-//  طبعا طريقة عامة لا تحتاج إلى حماية
-
+Route::get('getAllSpecialists' , [SpecialistsController::class , 'getAllSpecialists']);
 
 // Service API
 Route::post('createService' , [ServiceController::class , 'store'])->middleware('auth:sanctum');  // أعطيتها حمابة لأن الأدمن فقط من يقوم بعملية إنشاء الخدمة
